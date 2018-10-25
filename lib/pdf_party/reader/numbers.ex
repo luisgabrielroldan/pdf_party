@@ -25,7 +25,7 @@ defmodule PDFParty.Reader.Numbers do
           parse_int(str)
 
         true ->
-          raise "Invalid number: #{str}"
+          throw {:invalid_number, str}
       end
   end
 
@@ -41,7 +41,7 @@ defmodule PDFParty.Reader.Numbers do
         value
 
       _ ->
-        raise "Invalid numeric format: #{str}"
+        throw {:invalid_number, str}
     end
   end
 
@@ -59,7 +59,7 @@ defmodule PDFParty.Reader.Numbers do
         value
 
       _ ->
-        raise "Invalid numeric format: #{str}"
+        throw {:invalid_number, str}
     end
   end
 end

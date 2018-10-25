@@ -39,10 +39,10 @@ defmodule PDFParty.Reader.Document do
     do: {:ok, acc}
 
   defp load_objects([{offset, _, :n} | rest], io_device, acc) do
-    case Parser.parse_object!(io_device, offset) do
-      obj when is_map(obj) ->
+    case Parser.parse(io_device, offset) do
+      {:ok, obj} when is_map(obj) ->
         load_objects(rest, io_device, acc++[obj])
-      error ->
+      {:error, error} ->
         {:error, :parse_objects, offset, error}
     end
   end

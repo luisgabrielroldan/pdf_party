@@ -329,7 +329,7 @@ defmodule PDFParty.Reader.Tokenizer do
         :eof
 
       {:error, _} = error ->
-        raise error
+        throw {:read_error, error}
 
       data ->
         data

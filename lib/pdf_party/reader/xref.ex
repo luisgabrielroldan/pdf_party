@@ -40,7 +40,7 @@ defmodule PDFParty.Reader.XRef do
     :file.position(io_device, start_offset)
 
     with :ok <- lookup_trailer(io_device),
-         {:ok, trailer} when is_map(trailer) <- Parser.parse!(io_device) do
+         {:ok, trailer} when is_map(trailer) <- Parser.parse(io_device) do
       {:ok, trailer}
     end
   end
@@ -138,9 +138,7 @@ defmodule PDFParty.Reader.XRef do
     end
   end
 
-  defp load_xref_stream(io_device, offset) do
-    Parser.parse_object!(io_device, offset)
-
+  defp load_xref_stream(_io_device, _offset) do
     {:error, :xref_stream_not_supported}
   end
 

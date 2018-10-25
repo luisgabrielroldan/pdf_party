@@ -3,7 +3,7 @@ defmodule PDFParty.Reader.ParserTest do
 
   alias PDFParty.Reader.{
     Parser,
-    Object,
+    Object
   }
 
   @object_data """
@@ -46,42 +46,46 @@ defmodule PDFParty.Reader.ParserTest do
 
   describe "read_object/2" do
     test "read simple object" do
-      assert parse(@object_data) == %Object{
-               dict: %{
-                 "Foo" => %{"Boolean" => true, "Int" => 1_234_567_890},
-                 "Names" => [
-                   "Apple",
-                   "Orange",
-                   "Name 1",
-                   1,
-                   "Name 2",
-                   "Value2",
-                   "Zebra",
-                   %{"A" => "B"}
-                 ],
-                 "Reals" => [0.0, -0.01, -100.123456789],
-                 "Reference" => {:ref, 4, 0},
-                 "Int" => 234
-               },
-               gen: 0,
-               id: 1,
-               stream: nil
-             }
+      assert parse(@object_data) ==
+               {:ok,
+                %Object{
+                  dict: %{
+                    "Foo" => %{"Boolean" => true, "Int" => 1_234_567_890},
+                    "Names" => [
+                      "Apple",
+                      "Orange",
+                      "Name 1",
+                      1,
+                      "Name 2",
+                      "Value2",
+                      "Zebra",
+                      %{"A" => "B"}
+                    ],
+                    "Reals" => [0.0, -0.01, -100.123456789],
+                    "Reference" => {:ref, 4, 0},
+                    "Int" => 234
+                  },
+                  gen: 0,
+                  id: 1,
+                  stream: nil
+                }}
     end
 
     test "read stream object" do
-      assert parse(@stream_object) == %Object{
-        dict: %{"Length" => 3},
-        gen: 0,
-        id: 2,
-        stream: "Foo"
-      }
+      assert parse(@stream_object) ==
+               {:ok,
+                %Object{
+                  dict: %{"Length" => 3},
+                  gen: 0,
+                  id: 2,
+                  stream: "Foo"
+                }}
     end
   end
 
   defp parse(str) do
     {:ok, io} = File.open(str, [:ram])
 
-    Parser.parse_object!(io, 0)
+    Parser.parse(io, 0)
   end
 end
