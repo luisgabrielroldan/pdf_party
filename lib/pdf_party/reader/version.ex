@@ -1,9 +1,12 @@
 defmodule PDFParty.Reader.Version do
+
+  alias PDFParty.Reader.IOEx
+
   def read(io_device) do
     :file.position(io_device, :bof)
 
     io_device
-    |> IO.binread(:line)
+    |> IOEx.read_line()
     |> parse_version()
   end
 

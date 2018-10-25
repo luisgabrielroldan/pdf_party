@@ -1,7 +1,8 @@
 defmodule PDFParty.Reader.XRef do
   alias PDFParty.Reader.{
+    IOEx,
     Numbers,
-    Parser
+    Parser,
   }
 
   defstruct size: nil, root: nil, info: nil, entries: nil
@@ -12,7 +13,7 @@ defmodule PDFParty.Reader.XRef do
     with {:ok, offset} <- xref_start(io_device, file_size) do
       :file.position(io_device, offset)
 
-      case read_line(io_device) do
+      case IOEx.read_line(io_device) do
         "xref" <> _ ->
           load_xref_table(io_device, offset)
 
@@ -48,7 +49,7 @@ defmodule PDFParty.Reader.XRef do
   defp lookup_trailer(io_device) do
     {:ok, pos} = :file.position(io_device, :cur)
 
-    case read_line(io_device) do
+    case IOEx.read_line(io_device) do
       "trailer" ->
         :file.position(io_device, pos)
         :ok
@@ -101,7 +102,7 @@ defmodule PDFParty.Reader.XRef do
     do: {:ok, acc}
 
   defp read_header(io_device) do
-    with line when is_binary(line) <- read_line(io_device),
+    with line when is_binary(line) <- IOEx.read_line(io_device),
          [[id], [length]] <- Regex.scan(~r/[0-9]+/, line) do
       {:ok, Numbers.parse_int(id), Numbers.parse_int(length)}
     else
@@ -116,7 +117,7 @@ defmodule PDFParty.Reader.XRef do
     do: {:ok, acc}
 
   defp read_xref_entries(io_device, left, acc) do
-    line = read_line(io_device)
+    line = IOEx.read_line(io_device)
 
     case Regex.scan(~r/[0-9fn]+/, line) do
       [[offset], [gen], [state]] ->
@@ -154,22 +155,4 @@ defmodule PDFParty.Reader.XRef do
 
   defp find_startxref([_ | tail]),
     do: find_startxref(tail)
-
-  defp read_line(io_device, buffer \\ "") do
-    io_device
-    |> IO.binread(1)
-    |> case do
-      :eof ->
-        :eof
-
-      "\r" ->
-        read_line(io_device, buffer)
-
-      "\n" ->
-        buffer
-
-      c ->
-        read_line(io_device, buffer <> c)
-    end
-  end
 end
