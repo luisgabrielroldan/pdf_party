@@ -19,3 +19,8 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/pdf_party](https://hexdocs.pm/pdf_party).
 
+## License
+
+pdf_party is licensed under the MIT license.
+
+See [LICENSE](./LICENSE) for the full license text.
