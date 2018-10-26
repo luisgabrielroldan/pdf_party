@@ -336,8 +336,11 @@ defmodule PDFParty.Reader.Tokenizer do
     end
   end
 
-  defp hex_digit?(<<byte>>) do
-    (0x30 <= byte and byte <= 0x39) or (0x41 <= byte and byte <= 0x46) or
-      (0x61 <= byte and byte <= 0x66)
-  end
+  defp hex_digit?(<<byte>>) when 0x30 <= byte and byte <= 0x39,
+    do: true
+  defp hex_digit?(<<byte>>) when 0x41 <= byte and byte <= 0x46,
+    do: true
+  defp hex_digit?(<<byte>>) when 0x61 <= byte and byte <= 0x66,
+      do: true
+  defp hex_digit?(<<byte>>), do: false
 end
