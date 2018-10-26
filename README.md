@@ -1,23 +1,30 @@
-# PDF Party
+# pdf_party
 
-PDF Party wants to implement a PDF parser, providing programmatic access to the content of a PDF file.
+**This library is work in progress, it's in a pre-alpha state**
+
+pdf_party :confetti_ball: provides access to the content of a PDF file through a friendly Elixir API.
+
+The short term goal of the library is to provide a basic PDF parser implemented in Elixir that enable developers to test PDF documents with ex_unit.
+
+## Usage
+
+To be added...
+
+## Documentation
+
+Documentation can be found [here](https://hexdocs.pm/pdf_party)
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `pdf_party` to your list of dependencies in `mix.exs`:
+*Note that the library is not published yet!*
 
 ```elixir
 def deps do
   [
-    {:pdf_party, "~> 0.1.0"}
+    {:pdf_party, "~> 1.0.0"}
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/pdf_party](https://hexdocs.pm/pdf_party).
 
 ## License
 
