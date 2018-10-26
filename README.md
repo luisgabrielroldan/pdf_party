@@ -1,4 +1,5 @@
 # PDF Party
+[![Build Status](https://travis-ci.org/luisgabrielroldan/pdf_party.svg?branch=master)](https://travis-ci.org/luisgabrielroldan/pdf_party)
 
 PDF Party wants to implement a PDF parser, providing programmatic access to the content of a PDF file.
 
