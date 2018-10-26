@@ -1,3 +1,8 @@
 language: elixir
 elixir: "1.7"
 otp_release: "21.1"
+env:
+  - MIX_ENV=test
+script:
+  - mix test
+  - mix format --check-formatted
