@@ -7,17 +7,17 @@ defmodule PDFParty.Reader.Tokenizer do
   * `io_device`     - opened file handler
   * `last_token`    - the last token send the emited
   * `buffer`        - characters buffer
-  * `deep`          - used to detect nested parentesis inside strings
+  * `depth`         - used to detect nested parentesis inside strings
   * `next`          - if not nil, the next iteration will use that value instead of read a next character
   """
   
-  defstruct io_device: nil, last_token: nil, buffer: nil, deep: nil, next: nil
+  defstruct io_device: nil, last_token: nil, buffer: nil, depth: nil, next: nil
 
   @typep t :: %__MODULE__{
     io_device: File.io_device(),
     last_token: String.t(),
     buffer: String.t(),
-    deep: integer()
+    depth: integer()
   }
 
   @token_whitespace [<<0x00>>, <<0x09>>, <<0x0A>>, <<0x0C>>, <<0x0D>>, <<0x20>>]
@@ -135,7 +135,7 @@ defmodule PDFParty.Reader.Tokenizer do
     end
   end
 
-  defp process_byte({")", %{last_token: "(", buffer: buffer, deep: 1} = context}) do
+  defp process_byte({")", %{last_token: "(", buffer: buffer, depth: 1} = context}) do
     if String.length(buffer) > 0 do
       # If the previous was an escape char, continue parsing the literal
       if String.last(buffer) == "\\" do
@@ -154,17 +154,17 @@ defmodule PDFParty.Reader.Tokenizer do
   end
 
   # Save all chars to token buffer
-  defp process_byte({byte, %{last_token: "(", buffer: buffer, deep: deep} = context}) do
-    deep =
+  defp process_byte({byte, %{last_token: "(", buffer: buffer, depth: depth} = context}) do
+    depth =
       case byte do
-        "(" -> deep + 1
-        ")" -> deep - 1
-        _ -> deep
+        "(" -> depth + 1
+        ")" -> depth - 1
+        _ -> depth
       end
 
     context
     |> set_buffer(buffer <> byte)
-    |> set_deep(deep)
+    |> set_depth(depth)
     |> read_byte!()
     |> process_byte()
   end
@@ -238,7 +238,7 @@ defmodule PDFParty.Reader.Tokenizer do
   end
 
   defp process_byte({"(", %{buffer: buffer} = context}) do
-    context = %{context | deep: 1}
+    context = %{context | depth: 1}
 
     if String.length(buffer) > 0 do
       return_token(context, ["("])
@@ -300,8 +300,8 @@ defmodule PDFParty.Reader.Tokenizer do
   defp set_next(context, next),
     do: %{context | next: next}
 
-  defp set_deep(context, deep),
-    do: %{context | deep: deep}
+  defp set_depth(context, depth),
+    do: %{context | depth: depth}
 
   defp set_last_token(context, buffer),
     do: %{context | last_token: buffer}
