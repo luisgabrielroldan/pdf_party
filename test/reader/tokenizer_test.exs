@@ -1,5 +1,5 @@
 defmodule PDFParty.Reader.TokenizerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias PDFParty.Reader.Tokenizer
 
