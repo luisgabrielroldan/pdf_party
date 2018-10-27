@@ -26,6 +26,14 @@ def deps do
 end
 ```
 
+## Dialyzer
+
+This project uses Dialyzer static analysis tool.
+
+```
+mix dialyzer
+```
+
 ## License
 
 pdf_party is licensed under the MIT license.
