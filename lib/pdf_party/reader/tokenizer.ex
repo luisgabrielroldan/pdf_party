@@ -26,7 +26,7 @@ defmodule PDFParty.Reader.Tokenizer do
   @opening_closing_delimiter @opening_delimiter ++ @closing_delimiter
 
   @doc """
-  Emits a secuence of tokens for the given device and offset.
+  Emits a sequence of tokens for the given device and offset.
   """
   @spec stream!(io_device :: File.io_device(), offset :: integer()) :: Enumerable.t()
   def stream!(io_device, offset \\ nil) do
