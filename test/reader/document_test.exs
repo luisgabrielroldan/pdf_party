@@ -41,6 +41,7 @@ defmodule PDFParty.Reader.DocumentTest do
                  size: 121
                }
              } = doc
+      IO.inspect cache
 
       assert path =~ @pdf_file
       assert length(cache) == 120
