@@ -9,19 +9,22 @@ defmodule PDFParty.Reader.Parser do
   alias PDFParty.Reader.{
     Numbers,
     Object,
+    StreamObject,
     Str,
     Tokenizer
   }
 
   defstruct current: nil, parent: nil, buffer: []
 
+  @spec parse(File.io_device(), integer() | nil) ::
+          {:ok, %Object{} | %StreamObject{}} | {:error, term()}
   def parse(io_device, offset \\ nil) do
     try do
       Tokenizer.stream!(io_device, offset)
       |> Stream.transform(%__MODULE__{}, &next_token/2)
       |> Enum.take(1)
       |> Enum.to_list()
-      |> load_stream_if_avaliable(io_device)
+      |> load_stream(io_device)
       |> validate_object_termination(io_device)
       |> case do
         {:error, _} = error ->
@@ -35,10 +38,10 @@ defmodule PDFParty.Reader.Parser do
     end
   end
 
-  defp validate_object_termination(%Object{stream: nil} = object, _),
+  defp validate_object_termination(%Object{} = object, _),
     do: object
 
-  defp validate_object_termination(%Object{} = object, io_device) do
+  defp validate_object_termination(%StreamObject{} = object, io_device) do
     io_device
     |> Tokenizer.stream!()
     |> Enum.take(2)
@@ -55,23 +58,20 @@ defmodule PDFParty.Reader.Parser do
   defp validate_object_termination(object, _),
     do: object
 
-  defp load_stream_if_avaliable(
-         [%Object{stream: :available, dict: %{"Length" => length}} = object],
-         io_device
-       ) do
+  defp load_stream([%StreamObject{attrs: %{"Length" => length}} = object], io_device) do
     case :file.read(io_device, length) do
       {:ok, stream_data} ->
-        Object.set_stream(object, stream_data)
+        StreamObject.set_raw_data(object, stream_data)
 
       _ ->
         throw({:invalid_object_stream, object.id, object.gen})
     end
   end
 
-  defp load_stream_if_avaliable([%Object{stream: :available} = obj], _),
+  defp load_stream([%StreamObject{} = obj], _),
     do: throw({:invalid_stream_length, obj.id, obj.gen})
 
-  defp load_stream_if_avaliable([element], _),
+  defp load_stream([element], _),
     do: element
 
   # Str (strings)
@@ -131,17 +131,16 @@ defmodule PDFParty.Reader.Parser do
   defp next_token("obj", %{buffer: [gen, id | _]} = context),
     do: {[], new_context(context, Object.new(id, gen))}
 
-  defp next_token("endobj", %{buffer: [dict], current: %Object{}} = context) do
+  defp next_token("endobj", %{buffer: [data], current: %Object{}} = context) do
     context.current
-    |> Object.set_dict(dict)
-    |> Object.set_stream(nil)
+    |> Object.set_data(data)
     |> handle_result(context)
   end
 
-  defp next_token("stream", %{buffer: [dict], current: %Object{}} = context) do
+  defp next_token("stream", %{buffer: [attrs], current: %Object{}} = context) do
     context.current
-    |> Object.set_dict(dict)
-    |> Object.set_stream(:available)
+    |> StreamObject.from()
+    |> StreamObject.set_attrs(attrs)
     |> handle_result(context)
   end
 
