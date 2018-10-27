@@ -1,5 +1,4 @@
 defmodule PDFParty.Reader.Version do
-
   alias PDFParty.Reader.IOEx
 
   def read(io_device) do

@@ -166,7 +166,7 @@ defmodule PDFParty.Reader.Parser do
     value =
       cond do
         Numbers.is_number?(token) ->
-          Numbers.parse(token)
+          Numbers.parse!(token)
 
         true ->
           throw({:unexpected_token, token})

@@ -5,6 +5,7 @@ defmodule PDFParty.Reader.DocumentTest do
 
   @pdf_file "test/file_fixtures/pdf_wiki.pdf"
   @texput "test/file_fixtures/texput.pdf"
+  @updated_pdf "test/file_fixtures/hello_updated.pdf"
 
   describe "read/2" do
     test "read without preload" do
@@ -44,6 +45,26 @@ defmodule PDFParty.Reader.DocumentTest do
       assert path =~ @pdf_file
       assert length(cache) == 120
       assert length(entries) == 121
+    end
+
+    test "read incremental updated document" do
+      {:ok, doc} = Document.read(@updated_pdf, preload: true)
+
+      assert %Document{
+               cache: cache,
+               version: "1.7",
+               path: path,
+               xref_table: %{
+                 entries: entries,
+                 info: nil,
+                 root: {:ref, 1, 0},
+                 size: 6
+               }
+             } = doc
+
+      assert path =~ @updated_pdf
+      assert length(cache) == 5
+      assert length(entries) == 6
     end
   end
 
