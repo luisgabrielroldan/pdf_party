@@ -1,5 +1,5 @@
 defmodule PDFParty.Reader.ParserTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias PDFParty.Reader.{
     Parser,
