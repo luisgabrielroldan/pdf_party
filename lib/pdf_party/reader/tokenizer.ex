@@ -28,7 +28,7 @@ defmodule PDFParty.Reader.Tokenizer do
   @doc """
   Emits a sequence of tokens for the given device and offset.
   """
-  @spec stream!(io_device :: File.io_device(), offset :: integer()) :: Enumerable.t()
+  @spec stream!(io_device :: File.io_device(), offset :: integer() | nil) :: Enumerable.t()
   def stream!(io_device, offset \\ nil) do
     if not is_nil(offset) do
       :file.position(io_device, offset)
@@ -55,7 +55,7 @@ defmodule PDFParty.Reader.Tokenizer do
 
   # =====================================================
 
-  @spec process_byte({<<_::8>>, __MODULE__.t()}) :: {list(), t()} | {:halt, t()}
+  @spec process_byte({<<_::8>>, t()}) :: {list(), t()} | {:halt, t()}
 
   defp process_byte({_, %{last_token: :eof} = context}),
     do: {:halt, context}

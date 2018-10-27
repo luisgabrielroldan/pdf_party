@@ -75,6 +75,8 @@ defmodule PDFParty.Reader.XRef.TableParser do
         else
           {:ok, acc}
         end
+      {:error, :xref_invalid_format} ->
+        {:error, :xref_invalid_format}
     end
   end
 
