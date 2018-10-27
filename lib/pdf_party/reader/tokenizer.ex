@@ -10,15 +10,15 @@ defmodule PDFParty.Reader.Tokenizer do
   * `depth`         - used to detect nested parentesis inside strings
   * `next`          - if not nil, the next iteration will use that value instead of read a next character
   """
-  
+
   defstruct io_device: nil, last_token: nil, buffer: nil, depth: nil, next: nil
 
   @typep t :: %__MODULE__{
-    io_device: File.io_device(),
-    last_token: String.t(),
-    buffer: String.t(),
-    depth: integer()
-  }
+           io_device: File.io_device(),
+           last_token: String.t(),
+           buffer: String.t(),
+           depth: integer()
+         }
 
   @token_whitespace [<<0x00>>, <<0x09>>, <<0x0A>>, <<0x0C>>, <<0x0D>>, <<0x20>>]
   @opening_delimiter ["[", "{"]
@@ -30,7 +30,6 @@ defmodule PDFParty.Reader.Tokenizer do
   """
   @spec stream!(io_device :: File.io_device(), offset :: integer()) :: Enumerable.t()
   def stream!(io_device, offset \\ nil) do
-
     if not is_nil(offset) do
       :file.position(io_device, offset)
     end
@@ -56,9 +55,8 @@ defmodule PDFParty.Reader.Tokenizer do
 
   # =====================================================
 
-  @spec process_byte({<<_::8>>, __MODULE__.t()}) ::
-    {list(), t()} | {:halt, t()}
-  
+  @spec process_byte({<<_::8>>, __MODULE__.t()}) :: {list(), t()} | {:halt, t()}
+
   defp process_byte({_, %{last_token: :eof} = context}),
     do: {:halt, context}
 
@@ -329,7 +327,7 @@ defmodule PDFParty.Reader.Tokenizer do
         :eof
 
       {:error, _} = error ->
-        throw {:read_error, error}
+        throw({:read_error, error})
 
       data ->
         data
@@ -338,9 +336,12 @@ defmodule PDFParty.Reader.Tokenizer do
 
   defp hex_digit?(<<byte>>) when 0x30 <= byte and byte <= 0x39,
     do: true
+
   defp hex_digit?(<<byte>>) when 0x41 <= byte and byte <= 0x46,
     do: true
+
   defp hex_digit?(<<byte>>) when 0x61 <= byte and byte <= 0x66,
-      do: true
-  defp hex_digit?(<<byte>>), do: false
+    do: true
+
+  defp hex_digit?(<<_>>), do: false
 end

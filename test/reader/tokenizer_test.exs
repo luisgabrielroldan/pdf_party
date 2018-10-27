@@ -34,7 +34,6 @@ defmodule PDFParty.Reader.TokenizerTest do
       assert tokenize!("(Hello (\\))") == ["(", "Hello (\\)", ")"]
       assert tokenize!("(Hello (\\123(())))") == ["(", "Hello (\\123(()))", ")"]
 
-
       # Hex strings
       assert tokenize!("<FFFE0040>") == ["<", "FFFE0040", ">"]
       assert tokenize!("<1C 2D 3F>") == ["<", "1C2D3F", ">"]
