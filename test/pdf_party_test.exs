@@ -3,8 +3,8 @@ defmodule PDFPartyTest do
 
   @pdf_file "test/file_fixtures/sample.pdf"
   test "usage" do
-
     assert {:ok, document} = PDFParty.read(@pdf_file)
     assert {:ok, 2} = PDFParty.pages_count(document)
+    assert {:ok, [page_1, page_2]} = PDFParty.pages(document)
   end
 end
