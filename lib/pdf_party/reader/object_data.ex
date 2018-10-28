@@ -5,7 +5,7 @@ alias PDFParty.Reader.{
 }
 
 defprotocol ObjectData do
-  @spec from(%Object{} | %StreamObject{}) :: {:error, :invalid_object} | term()
+  @spec from(%Object{} | %StreamObject{}) :: {:error, :invalid_object} | {:ok, map()}
   def from(_)
 end
 
