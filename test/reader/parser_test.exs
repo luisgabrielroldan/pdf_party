@@ -34,6 +34,7 @@ defmodule PDFParty.Reader.ParserTest do
     /Foo 1
     /Bar (A)
     /Baz 1 0 R
+    /Coz [<48656C6C6F20776F726C64> <40204>]
   >>
   endobj
   """
@@ -92,7 +93,8 @@ defmodule PDFParty.Reader.ParserTest do
                   data: %{
                     "Foo" => 1,
                     "Bar" => "A",
-                    "Baz" => {:ref, 1, 0}
+                    "Baz" => {:ref, 1, 0},
+                    "Coz" => ["Hello world", "@ @"]
                   },
                   gen: 0,
                   id: 3
