@@ -1,5 +1,6 @@
 defmodule PDFParty.Reader.Document do
   alias PDFParty.Reader.{
+    Catalog,
     Object,
     Parser,
     StreamObject,
@@ -21,6 +22,9 @@ defmodule PDFParty.Reader.Document do
   defstruct version: nil, xref: nil, objects: nil, path: nil
 
   @file_opts [:read, :raw, :read_ahead]
+
+  @spec pages_count(Document.t()) :: {:ok, integer()} | {:error, term()}
+  defdelegate pages_count(document), to: Catalog
 
   @spec read(String.t(), list()) :: {:ok, t()} | {:error, term()}
   def read(path, _opts \\ []) do

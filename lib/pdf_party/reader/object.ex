@@ -7,4 +7,7 @@ defmodule PDFParty.Reader.Object do
 
   def set_data(object, data),
     do: %{object | data: data}
+
+  def get_data(%__MODULE__{data: data}),
+    do: {:ok, data}
 end

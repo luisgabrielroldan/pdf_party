@@ -1,5 +1,10 @@
 defmodule PDFParty do
   @moduledoc """
-  Documentation for PDFParty.
+  PDFParty.
   """
+
+  alias PDFParty.Reader.Document
+
+  defdelegate read(path, opts \\ []), to: Document
+  defdelegate pages_count(document), to: Document
 end
