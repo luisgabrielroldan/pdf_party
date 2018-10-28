@@ -18,7 +18,7 @@ defmodule PDFParty.Reader.DocumentTest do
                objects: objects,
                version: "1.4",
                path: path,
-               xref_table: %{
+               xref: %{
                  entries: entries,
                  info: {:ref, 1, 0},
                  root: {:ref, 22, 0},
@@ -38,7 +38,7 @@ defmodule PDFParty.Reader.DocumentTest do
                objects: objects,
                version: "1.7",
                path: path,
-               xref_table: %{
+               xref: %{
                  entries: entries,
                  info: nil,
                  root: {:ref, 1, 0},

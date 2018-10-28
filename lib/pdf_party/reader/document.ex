@@ -1,5 +1,6 @@
 defmodule PDFParty.Reader.Document do
   alias PDFParty.Reader.{
+    Catalog,
     Object,
     Parser,
     StreamObject,
@@ -9,7 +10,7 @@ defmodule PDFParty.Reader.Document do
 
   @type t :: %__MODULE__{
           version: String.t(),
-          xref_table: %XRef{},
+          xref: %XRef{},
           objects: list(),
           path: String.t()
         }
@@ -18,9 +19,12 @@ defmodule PDFParty.Reader.Document do
 
   @type ref :: {:ref, integer(), integer()}
 
-  defstruct version: nil, xref_table: nil, objects: nil, path: nil
+  defstruct version: nil, xref: nil, objects: nil, path: nil
 
   @file_opts [:read, :raw, :read_ahead]
+
+  @spec pages_count(t()) :: {:ok, integer()} | {:error, term()}
+  defdelegate pages_count(document), to: Catalog
 
   @spec read(String.t(), list()) :: {:ok, t()} | {:error, term()}
   def read(path, _opts \\ []) do
@@ -29,11 +33,11 @@ defmodule PDFParty.Reader.Document do
     with {:ok, %{size: file_size}} <- File.stat(path),
          {:ok, io_device} <- File.open(path, @file_opts),
          {:ok, version} <- Version.read(io_device),
-         {:ok, xref_table} <- XRef.load(io_device, file_size),
-         {:ok, objects} <- preload_objects(io_device, xref_table) do
+         {:ok, xref} <- XRef.load(io_device, file_size),
+         {:ok, objects} <- preload_objects(io_device, xref) do
       document = %__MODULE__{
         version: version,
-        xref_table: xref_table,
+        xref: xref,
         objects: objects,
         path: path
       }
