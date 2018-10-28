@@ -23,7 +23,7 @@ defmodule PDFParty.Reader.Document do
 
   @file_opts [:read, :raw, :read_ahead]
 
-  @spec pages_count(Document.t()) :: {:ok, integer()} | {:error, term()}
+  @spec pages_count(t()) :: {:ok, integer()} | {:error, term()}
   defdelegate pages_count(document), to: Catalog
 
   @spec read(String.t(), list()) :: {:ok, t()} | {:error, term()}
