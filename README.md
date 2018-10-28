@@ -8,7 +8,16 @@ The short term goal of the library is to provide a basic PDF parser implemented 
 
 ## Usage
 
-To be added...
+```elixir
+  test "usage example" do
+    assert {:ok, document} = PDFParty.read("file.pdf")
+    assert {:ok, 2} = PDFParty.pages_count(document)
+    assert {:ok, [page_1, page_2]} = PDFParty.pages(document)
+
+    assert PDFParty.text(page_1) =~ "This text is in the first page"
+    assert PDFParty.text(page_2) =~ "This text is in the second page"
+  end
+```
 
 ## Documentation
 
