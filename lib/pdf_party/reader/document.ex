@@ -66,8 +66,14 @@ defmodule PDFParty.Reader.Document do
 
   defp load_objects([{_id, _gen, offset, :n} | rest], io_device, acc) do
     case Parser.parse(io_device, offset) do
-      {:ok, obj} ->
+      {:ok, [%Object{} =  obj]} ->
         load_objects(rest, io_device, acc ++ [obj])
+
+      {:ok, [%StreamObject{} =  obj]} ->
+        load_objects(rest, io_device, acc ++ [obj])
+
+      {:ok, _} ->
+        {:error, :invalid_object}
 
       {:error, error} ->
         {:error, {:load_object, offset, error}}

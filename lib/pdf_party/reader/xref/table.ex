@@ -75,6 +75,7 @@ defmodule PDFParty.Reader.XRef.TableParser do
         else
           {:ok, acc}
         end
+
       {:error, :xref_invalid_format} ->
         {:error, :xref_invalid_format}
     end
@@ -122,8 +123,14 @@ defmodule PDFParty.Reader.XRef.TableParser do
     :file.position(io_device, start_offset)
 
     with :ok <- lookup_trailer(io_device),
-         {:ok, trailer} when is_map(trailer) <- Parser.parse(io_device) do
+         {:ok, [trailer]} when is_map(trailer) <- Parser.parse(io_device) do
       {:ok, trailer}
+    else
+      {:ok, _} ->
+        {:error, :trailer_not_found}
+
+      error ->
+        error
     end
   end
 

@@ -28,8 +28,18 @@ defmodule PDFParty.Reader.Tokenizer do
   @doc """
   Emits a sequence of tokens for the given device and offset.
   """
-  @spec stream!(io_device :: File.io_device(), offset :: integer() | nil) :: Enumerable.t()
-  def stream!(io_device, offset \\ nil) do
+  @spec stream!(io_device :: File.io_device() | String.t(), offset :: integer() | nil) ::
+          Enumerable.t()
+
+  def stream!(io_device, offset \\ nil)
+
+  def stream!(str, offset) when is_binary(str) do
+    with {:ok, io_device} <- File.open(str, [:ram]) do
+      stream!(io_device, offset)
+    end
+  end
+
+  def stream!(io_device, offset) do
     if not is_nil(offset) do
       :file.position(io_device, offset)
     end
@@ -121,7 +131,7 @@ defmodule PDFParty.Reader.Tokenizer do
   end
 
   # =====================================================
-  # Inside a literal 
+  # Inside a literal
   # =====================================================
   defp process_byte({:eof, %{last_token: "(", buffer: buffer} = context}) do
     if String.length(buffer) > 0 do

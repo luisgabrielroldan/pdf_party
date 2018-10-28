@@ -60,11 +60,21 @@ defmodule PDFParty.Reader.ParserTest do
   endobj
   """
 
+  @text_object """
+  2 0 obj
+  BT
+  70 50 TD
+  /F1 12 Tf
+  (Hello, world!) Tj
+  ET
+  endobj
+  """
+
   describe "read_object/2" do
     test "read only first object found" do
       assert parse(@many_objects_data) ==
                {:ok,
-                %Object{
+                [%Object{
                   data: %{
                     "Foo" => %{"Boolean" => true, "Int" => 1_234_567_890},
                     "Names" => [
@@ -83,13 +93,13 @@ defmodule PDFParty.Reader.ParserTest do
                   },
                   gen: 0,
                   id: 1
-                }}
+                }]}
     end
 
     test "read dictionary object" do
       assert parse(@dictionary_object) ==
                {:ok,
-                %Object{
+                [%Object{
                   data: %{
                     "Foo" => 1,
                     "Bar" => "A",
@@ -98,27 +108,27 @@ defmodule PDFParty.Reader.ParserTest do
                   },
                   gen: 0,
                   id: 3
-                }}
+                }]}
     end
 
     test "read string object" do
       assert parse(@string_object) ==
                {:ok,
-                %Object{
+                [%Object{
                   data: "Hey hey Captain!",
                   gen: 0,
                   id: 3
-                }}
+                }]}
     end
 
     test "read stream object" do
       assert {:ok,
-              %StreamObject{
+              [%StreamObject{
                 attrs: %{"Length" => 44},
                 gen: 0,
                 id: 2,
                 raw_data: raw_data
-              }} = parse(@stream_object)
+              }]} = parse(@stream_object)
 
       assert """
              BT
@@ -127,6 +137,26 @@ defmodule PDFParty.Reader.ParserTest do
              (Hello, world!) Tj
              ET
              """ == raw_data
+    end
+
+    test "read text object" do
+      assert {:ok,
+              [%Object{
+                data:
+                  {:text,
+                   [
+                     70,
+                     50,
+                     {:op, "TD"},
+                     "F1",
+                     12,
+                     {:op, "Tf"},
+                     "Hello, world!",
+                     {:op, "Tj"}
+                   ]},
+                gen: 0,
+                id: 2
+              }]} = parse(@text_object)
     end
   end
 

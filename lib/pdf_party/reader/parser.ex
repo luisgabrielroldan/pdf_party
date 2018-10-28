@@ -14,15 +14,24 @@ defmodule PDFParty.Reader.Parser do
     Tokenizer
   }
 
-  defstruct current: nil, parent: nil, buffer: []
+  defstruct current: nil, parent: nil, buffer: [], text: nil
 
-  @spec parse(File.io_device(), integer() | nil) ::
-          {:ok, %Object{} | %StreamObject{}} | {:error, term()}
-  def parse(io_device, offset \\ nil) do
+  @spec parse(File.io_device() | String.t(), integer() | nil, opts :: list()) ::
+          {:ok, %Object{} | %StreamObject{} | list() | map()} | {:error, term()}
+  def parse(io_device, offset \\ nil, opts \\ []) do
     try do
-      Tokenizer.stream!(io_device, offset)
-      |> Stream.transform(%__MODULE__{}, &next_token/2)
-      |> Enum.take(1)
+      stream =
+        Tokenizer.stream!(io_device, offset)
+        |> Stream.transform(%__MODULE__{text: opts[:text]}, &next_token/2)
+
+      stream =
+        if opts[:text] do
+          stream
+        else
+          Enum.take(stream, 1)
+        end
+
+      stream
       |> Enum.to_list()
       |> load_stream(io_device)
       |> validate_object_termination(io_device)
@@ -30,28 +39,28 @@ defmodule PDFParty.Reader.Parser do
         {:error, _} = error ->
           error
 
-        element ->
-          {:ok, element}
+        list ->
+          {:ok, list}
       end
     catch
       error -> {:error, error}
     end
   end
 
-  defp validate_object_termination(%Object{} = object, _),
-    do: object
+  defp validate_object_termination([%Object{} = object], _),
+    do: [object]
 
-  defp validate_object_termination(%StreamObject{} = object, io_device) do
+  defp validate_object_termination([%StreamObject{} = object], io_device) do
     io_device
     |> Tokenizer.stream!()
     |> Enum.take(2)
     |> Enum.to_list()
     |> case do
       ["endstream", "endobj"] ->
-        object
+        [object]
 
       _ ->
-        throw({:invalid_object_termination, object.id, object.gen})
+        {:error, {:invalid_object_termination, object.id, object.gen}}
     end
   end
 
@@ -61,7 +70,7 @@ defmodule PDFParty.Reader.Parser do
   defp load_stream([%StreamObject{attrs: %{"Length" => length}} = object], io_device) do
     case :file.read(io_device, length) do
       {:ok, stream_data} ->
-        StreamObject.set_raw_data(object, stream_data)
+        [StreamObject.set_raw_data(object, stream_data)]
 
       _ ->
         throw({:invalid_object_stream, object.id, object.gen})
@@ -71,8 +80,8 @@ defmodule PDFParty.Reader.Parser do
   defp load_stream([%StreamObject{} = obj], _),
     do: throw({:invalid_stream_length, obj.id, obj.gen})
 
-  defp load_stream([element], _),
-    do: element
+  defp load_stream(list, _),
+    do: list
 
   # Str (strings)
   defp next_token("(", context),
@@ -123,6 +132,10 @@ defmodule PDFParty.Reader.Parser do
   defp next_token("/", context),
     do: {[], new_context(context, :name)}
 
+  defp next_token(value, %{text: true, current: :name} = context) do
+    handle_result({:name, value}, context)
+  end
+
   defp next_token(value, %{current: :name} = context) do
     handle_result(value, context)
   end
@@ -144,6 +157,21 @@ defmodule PDFParty.Reader.Parser do
     |> handle_result(context)
   end
 
+  defp next_token("BT", context),
+    do: {[], new_context(context, :text)}
+
+  defp next_token("ET", %{buffer: buffer, current: :text} = context) do
+    content = {:text, Enum.reverse(buffer)}
+    handle_result(content, context)
+  end
+
+  defp next_token(op, %{current: :text} = context)
+       when op in ["rg"],
+       do: {[], buffer_add(context, {:op, op})}
+
+  defp next_token("T" <> _ = op, %{current: :text} = context),
+    do: {[], buffer_add(context, {:op, op})}
+
   defp next_token("trailer", context),
     do: {[], new_context(context, :trailer)}
 
@@ -162,16 +190,17 @@ defmodule PDFParty.Reader.Parser do
     do: {[], buffer_add(context, false)}
 
   defp next_token(token, context) do
-    value =
       cond do
         Numbers.is_number?(token) ->
-          Numbers.parse!(token)
+          value = Numbers.parse!(token)
+          {[], buffer_add(context, value)}
+
+        context.text ->
+          {[], context}
 
         true ->
-          throw({:unexpected_token, token})
+          throw({:unexpected_token, token, context})
       end
-
-    {[], buffer_add(context, value)}
   end
 
   defp handle_result(element, context) do
