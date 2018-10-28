@@ -1,6 +1,8 @@
 defmodule PDFParty.Reader.Object do
   defstruct id: nil, gen: nil, data: nil
 
+  @type ref :: {:ref, integer(), integer()}
+
   def new(id, gen) do
     %__MODULE__{id: id, gen: gen}
   end

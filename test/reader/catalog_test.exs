@@ -18,4 +18,12 @@ defmodule PDFParty.Reader.CatalogTest do
       assert {:ok, 18} = Catalog.pages_count(doc_2)
     end
   end
+
+  describe "pages/1" do
+    test "read pages" do
+      {:ok, doc} = Document.read(@pdf_1)
+      assert {:ok, pages} = Catalog.pages(doc)
+      assert length(pages) == 2
+    end
+  end
 end

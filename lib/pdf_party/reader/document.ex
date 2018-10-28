@@ -1,11 +1,11 @@
 defmodule PDFParty.Reader.Document do
   alias PDFParty.Reader.{
-    Catalog,
     Object,
+    ObjectData,
     Parser,
     StreamObject,
     Version,
-    XRef
+    XRef,
   }
 
   @type t :: %__MODULE__{
@@ -17,14 +17,9 @@ defmodule PDFParty.Reader.Document do
 
   @type object :: %Object{} | %StreamObject{}
 
-  @type ref :: {:ref, integer(), integer()}
-
   defstruct version: nil, xref: nil, objects: nil, path: nil
 
   @file_opts [:read, :raw, :read_ahead]
-
-  @spec pages_count(t()) :: {:ok, integer()} | {:error, term()}
-  defdelegate pages_count(document), to: Catalog
 
   @spec read(String.t(), list()) :: {:ok, t()} | {:error, term()}
   def read(path, _opts \\ []) do
@@ -46,13 +41,20 @@ defmodule PDFParty.Reader.Document do
     end
   end
 
-  @spec get_object(ref(), t()) :: {:ok, object()} | :error
+  @spec get_object(Object.ref(), t()) :: {:ok, object()} | :error
   def get_object({:ref, id, gen}, %__MODULE__{objects: objects}) do
     objects
     |> Enum.find(&match?(%{id: ^id, gen: ^gen}, &1))
     |> case do
       nil -> :error
       obj -> {:ok, obj}
+    end
+  end
+
+  def get_object_data({:ref, _, _} = ref, %__MODULE__{} = document) do
+    with {:ok, page} <- get_object(ref, document),
+         {:ok, data} <- ObjectData.from(page) do
+      {:ok, data}
     end
   end
 
@@ -64,8 +66,14 @@ defmodule PDFParty.Reader.Document do
 
   defp load_objects([{_id, _gen, offset, :n} | rest], io_device, acc) do
     case Parser.parse(io_device, offset) do
-      {:ok, obj} ->
+      {:ok, [%Object{} =  obj]} ->
         load_objects(rest, io_device, acc ++ [obj])
+
+      {:ok, [%StreamObject{} =  obj]} ->
+        load_objects(rest, io_device, acc ++ [obj])
+
+      {:ok, _} ->
+        {:error, :invalid_object}
 
       {:error, error} ->
         {:error, {:load_object, offset, error}}
