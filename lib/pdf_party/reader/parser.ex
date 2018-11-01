@@ -14,18 +14,22 @@ defmodule PDFParty.Reader.Parser do
     Tokenizer
   }
 
-  defstruct current: nil, parent: nil, buffer: [], text: nil
+  defstruct current: nil, parent: nil, buffer: []
 
   @spec parse(File.io_device() | String.t(), integer() | nil, opts :: list()) ::
           {:ok, %Object{} | %StreamObject{} | list() | map()} | {:error, term()}
   def parse(io_device, offset \\ nil, opts \\ []) do
+    opts = Enum.into(opts, %{})
+    loop = &next_token(&1, &2, opts)
+
     try do
-      stream =
-        Tokenizer.stream!(io_device, offset)
-        |> Stream.transform(%__MODULE__{text: opts[:text]}, &next_token/2)
 
       stream =
-        if opts[:text] do
+        Tokenizer.stream!(io_device, offset)
+        |> Stream.transform(%__MODULE__{}, loop)
+
+      stream =
+        if opts[:all] do
           stream
         else
           Enum.take(stream, 1)
@@ -84,98 +88,98 @@ defmodule PDFParty.Reader.Parser do
     do: list
 
   # Str (strings)
-  defp next_token("(", context),
+  defp next_token("(", context, _opts),
     do: {[], new_context(context, Str.new())}
 
-  defp next_token(")", %{current: %Str{}, buffer: [value]} = context) do
+  defp next_token(")", %{current: %Str{}, buffer: [value]} = context, _opts) do
     context.current
     |> Str.assign(value)
     |> Str.build()
     |> handle_result(context)
   end
 
-  defp next_token("<", context),
+  defp next_token("<", context, _opts),
     do: {[], new_context(context, Str.new(true))}
 
-  defp next_token(">", %{current: %Str{}, buffer: [value]} = context) do
+  defp next_token(">", %{current: %Str{}, buffer: [value]} = context, _opts) do
     context.current
     |> Str.assign(value)
     |> Str.build()
     |> handle_result(context)
   end
 
-  defp next_token(token, %{current: %Str{}} = context) do
+  defp next_token(token, %{current: %Str{}} = context, _opts) do
     {[], buffer_add(context, token)}
   end
 
   # Lists
-  defp next_token("[", context),
+  defp next_token("[", context, _opts),
     do: {[], new_context(context, :list)}
 
-  defp next_token("]", %{buffer: buffer, current: :list} = context) do
+  defp next_token("]", %{buffer: buffer, current: :list} = context, _opts) do
     buffer
     |> Enum.reverse()
     |> handle_result(context)
   end
 
   # Dictionaries
-  defp next_token("<<", context),
+  defp next_token("<<", context, _opts),
     do: {[], new_context(context, :dictionary)}
 
-  defp next_token(">>", %{buffer: buffer, current: :dictionary} = context) do
+  defp next_token(">>", %{buffer: buffer, current: :dictionary} = context, _opts) do
     buffer
     |> to_dictionary()
     |> handle_result(context)
   end
 
   # Name objects
-  defp next_token("/", context),
+  defp next_token("/", context, _opts),
     do: {[], new_context(context, :name)}
 
-  defp next_token(value, %{text: true, current: :name} = context) do
+  defp next_token(value, %{current: :name} = context, %{all: true}) do
     handle_result({:name, value}, context)
   end
 
-  defp next_token(value, %{current: :name} = context) do
+  defp next_token(value, %{current: :name} = context, _opts) do
     handle_result(value, context)
   end
 
   # Objects
-  defp next_token("obj", %{buffer: [gen, id | _]} = context),
+  defp next_token("obj", %{buffer: [gen, id | _]} = context, _opts),
     do: {[], new_context(context, Object.new(id, gen))}
 
-  defp next_token("endobj", %{buffer: [data], current: %Object{}} = context) do
+  defp next_token("endobj", %{buffer: [data], current: %Object{}} = context, _opts) do
     context.current
     |> Object.set_data(data)
     |> handle_result(context)
   end
 
-  defp next_token("stream", %{buffer: [attrs], current: %Object{}} = context) do
+  defp next_token("stream", %{buffer: [attrs], current: %Object{}} = context, _opts) do
     context.current
     |> StreamObject.from()
     |> StreamObject.set_attrs(attrs)
     |> handle_result(context)
   end
 
-  defp next_token("BT", context),
+  defp next_token("BT", context, _opts),
     do: {[], new_context(context, :text)}
 
-  defp next_token("ET", %{buffer: buffer, current: :text} = context) do
+  defp next_token("ET", %{buffer: buffer, current: :text} = context, _opts) do
     content = {:text, Enum.reverse(buffer)}
     handle_result(content, context)
   end
 
-  defp next_token(op, %{current: :text} = context)
+  defp next_token(op, %{current: :text} = context, _opts)
        when op in ["rg"],
        do: {[], buffer_add(context, {:op, op})}
 
-  defp next_token("T" <> _ = op, %{current: :text} = context),
+  defp next_token("T" <> _ = op, %{current: :text} = context, _opts),
     do: {[], buffer_add(context, {:op, op})}
 
-  defp next_token("trailer", context),
+  defp next_token("trailer", context, _opts),
     do: {[], new_context(context, :trailer)}
 
-  defp next_token("R", %{buffer: [gen, id | rest]} = context) do
+  defp next_token("R", %{buffer: [gen, id | rest]} = context, _opts) do
     ref = {:ref, id, gen}
 
     context = %{context | buffer: [ref | rest]}
@@ -183,24 +187,24 @@ defmodule PDFParty.Reader.Parser do
     {[], context}
   end
 
-  defp next_token("true", context),
+  defp next_token("true", context, _opts),
     do: {[], buffer_add(context, true)}
 
-  defp next_token("false", context),
+  defp next_token("false", context, _opts),
     do: {[], buffer_add(context, false)}
 
-  defp next_token(token, context) do
-      cond do
-        Numbers.is_number?(token) ->
-          value = Numbers.parse!(token)
-          {[], buffer_add(context, value)}
+  defp next_token(token, context, opts) do
+    cond do
+      Numbers.is_number?(token) ->
+        value = Numbers.parse!(token)
+        {[], buffer_add(context, value)}
 
-        context.text ->
-          {[], context}
+      Map.get(opts, :all) ->
+        {[], context}
 
-        true ->
-          throw({:unexpected_token, token, context})
-      end
+      true ->
+        throw({:unexpected_token, token, context})
+    end
   end
 
   defp handle_result(element, context) do

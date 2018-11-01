@@ -23,7 +23,7 @@ defmodule PDFParty.Reader.Page do
   end
 
   def text(%__MODULE__{data: data}) do
-    with {:ok, text} <- Parser.parse(data, nil, text: true) do
+    with {:ok, text} <- Parser.parse(data, nil, all: true) do
       filter_text(text)
     else
       _ ->

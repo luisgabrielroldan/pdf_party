@@ -9,7 +9,7 @@ defmodule PDFPartyTest do
     assert {:ok, 1} = PDFParty.pages_count(document)
     assert {:ok, [page]} = PDFParty.pages(document)
 
-    assert PDFParty.text(page) =~ "Hello, boy!"
+    assert PDFParty.text(page) == "Hello, boy!"
   end
 
   test "usage 2" do
