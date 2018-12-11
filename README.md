@@ -1,4 +1,5 @@
 # pdf_party
+[![Build Status](https://travis-ci.org/luisgabrielroldan/pdf_party.svg?branch=master)](https://travis-ci.org/luisgabrielroldan/pdf_party)
 
 **This library is work in progress, it's in a pre-alpha state**
 
