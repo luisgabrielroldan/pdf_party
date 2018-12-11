@@ -9,146 +9,177 @@ defmodule PDFParty.Reader.Parser do
   alias PDFParty.Reader.{
     Numbers,
     Object,
+    StreamObject,
     Str,
     Tokenizer
   }
 
   defstruct current: nil, parent: nil, buffer: []
 
-  def parse(io_device, offset \\ nil) do
+  @spec parse(File.io_device() | String.t(), integer() | nil, opts :: list()) ::
+          {:ok, %Object{} | %StreamObject{} | list() | map()} | {:error, term()}
+  def parse(io_device, offset \\ nil, opts \\ []) do
+    opts = Enum.into(opts, %{})
+    loop = &next_token(&1, &2, opts)
+
     try do
-      Tokenizer.stream!(io_device, offset)
-      |> Stream.transform(%__MODULE__{}, &next_token/2)
-      |> Enum.take(1)
+
+      stream =
+        Tokenizer.stream!(io_device, offset)
+        |> Stream.transform(%__MODULE__{}, loop)
+
+      stream =
+        if opts[:all] do
+          stream
+        else
+          Enum.take(stream, 1)
+        end
+
+      stream
       |> Enum.to_list()
-      |> load_stream_if_avaliable(io_device)
+      |> load_stream(io_device)
       |> validate_object_termination(io_device)
       |> case do
         {:error, _} = error ->
           error
 
-        element ->
-          {:ok, element}
+        list ->
+          {:ok, list}
       end
     catch
       error -> {:error, error}
     end
   end
 
-  defp validate_object_termination(%Object{stream: nil} = object, _),
-    do: object
+  defp validate_object_termination([%Object{} = object], _),
+    do: [object]
 
-  defp validate_object_termination(%Object{} = object, io_device) do
+  defp validate_object_termination([%StreamObject{} = object], io_device) do
     io_device
     |> Tokenizer.stream!()
     |> Enum.take(2)
     |> Enum.to_list()
     |> case do
       ["endstream", "endobj"] ->
-        object
+        [object]
 
       _ ->
-        throw({:invalid_object_termination, object.id, object.gen})
+        {:error, {:invalid_object_termination, object.id, object.gen}}
     end
   end
 
   defp validate_object_termination(object, _),
     do: object
 
-  defp load_stream_if_avaliable(
-         [%Object{stream: :available, dict: %{"Length" => length}} = object],
-         io_device
-       ) do
+  defp load_stream([%StreamObject{attrs: %{"Length" => length}} = object], io_device) do
     case :file.read(io_device, length) do
       {:ok, stream_data} ->
-        Object.set_stream(object, stream_data)
+        [StreamObject.set_raw_data(object, stream_data)]
 
       _ ->
         throw({:invalid_object_stream, object.id, object.gen})
     end
   end
 
-  defp load_stream_if_avaliable([%Object{stream: :available} = obj], _),
+  defp load_stream([%StreamObject{} = obj], _),
     do: throw({:invalid_stream_length, obj.id, obj.gen})
 
-  defp load_stream_if_avaliable([element], _),
-    do: element
+  defp load_stream(list, _),
+    do: list
 
   # Str (strings)
-  defp next_token("(", context),
+  defp next_token("(", context, _opts),
     do: {[], new_context(context, Str.new())}
 
-  defp next_token(")", %{current: %Str{}, buffer: [value]} = context) do
+  defp next_token(")", %{current: %Str{}, buffer: [value]} = context, _opts) do
     context.current
     |> Str.assign(value)
     |> Str.build()
     |> handle_result(context)
   end
 
-  defp next_token("<", context),
+  defp next_token("<", context, _opts),
     do: {[], new_context(context, Str.new(true))}
 
-  defp next_token(">", %{current: %Str{}, buffer: [value]} = context) do
+  defp next_token(">", %{current: %Str{}, buffer: [value]} = context, _opts) do
     context.current
     |> Str.assign(value)
     |> Str.build()
     |> handle_result(context)
   end
 
-  defp next_token(token, %{current: %Str{}} = context) do
+  defp next_token(token, %{current: %Str{}} = context, _opts) do
     {[], buffer_add(context, token)}
   end
 
   # Lists
-  defp next_token("[", context),
+  defp next_token("[", context, _opts),
     do: {[], new_context(context, :list)}
 
-  defp next_token("]", %{buffer: buffer, current: :list} = context) do
+  defp next_token("]", %{buffer: buffer, current: :list} = context, _opts) do
     buffer
     |> Enum.reverse()
     |> handle_result(context)
   end
 
   # Dictionaries
-  defp next_token("<<", context),
+  defp next_token("<<", context, _opts),
     do: {[], new_context(context, :dictionary)}
 
-  defp next_token(">>", %{buffer: buffer, current: :dictionary} = context) do
+  defp next_token(">>", %{buffer: buffer, current: :dictionary} = context, _opts) do
     buffer
     |> to_dictionary()
     |> handle_result(context)
   end
 
   # Name objects
-  defp next_token("/", context),
+  defp next_token("/", context, _opts),
     do: {[], new_context(context, :name)}
 
-  defp next_token(value, %{current: :name} = context) do
+  defp next_token(value, %{current: :name} = context, %{all: true}) do
+    handle_result({:name, value}, context)
+  end
+
+  defp next_token(value, %{current: :name} = context, _opts) do
     handle_result(value, context)
   end
 
   # Objects
-  defp next_token("obj", %{buffer: [gen, id | _]} = context),
+  defp next_token("obj", %{buffer: [gen, id | _]} = context, _opts),
     do: {[], new_context(context, Object.new(id, gen))}
 
-  defp next_token("endobj", %{buffer: [dict], current: %Object{}} = context) do
+  defp next_token("endobj", %{buffer: [data], current: %Object{}} = context, _opts) do
     context.current
-    |> Object.set_dict(dict)
-    |> Object.set_stream(nil)
+    |> Object.set_data(data)
     |> handle_result(context)
   end
 
-  defp next_token("stream", %{buffer: [dict], current: %Object{}} = context) do
+  defp next_token("stream", %{buffer: [attrs], current: %Object{}} = context, _opts) do
     context.current
-    |> Object.set_dict(dict)
-    |> Object.set_stream(:available)
+    |> StreamObject.from()
+    |> StreamObject.set_attrs(attrs)
     |> handle_result(context)
   end
 
-  defp next_token("trailer", context),
+  defp next_token("BT", context, _opts),
+    do: {[], new_context(context, :text)}
+
+  defp next_token("ET", %{buffer: buffer, current: :text} = context, _opts) do
+    content = {:text, Enum.reverse(buffer)}
+    handle_result(content, context)
+  end
+
+  defp next_token(op, %{current: :text} = context, _opts)
+       when op in ["rg"],
+       do: {[], buffer_add(context, {:op, op})}
+
+  defp next_token("T" <> _ = op, %{current: :text} = context, _opts),
+    do: {[], buffer_add(context, {:op, op})}
+
+  defp next_token("trailer", context, _opts),
     do: {[], new_context(context, :trailer)}
 
-  defp next_token("R", %{buffer: [gen, id | rest]} = context) do
+  defp next_token("R", %{buffer: [gen, id | rest]} = context, _opts) do
     ref = {:ref, id, gen}
 
     context = %{context | buffer: [ref | rest]}
@@ -156,23 +187,24 @@ defmodule PDFParty.Reader.Parser do
     {[], context}
   end
 
-  defp next_token("true", context),
+  defp next_token("true", context, _opts),
     do: {[], buffer_add(context, true)}
 
-  defp next_token("false", context),
+  defp next_token("false", context, _opts),
     do: {[], buffer_add(context, false)}
 
-  defp next_token(token, context) do
-    value =
-      cond do
-        Numbers.is_number?(token) ->
-          Numbers.parse(token)
+  defp next_token(token, context, opts) do
+    cond do
+      Numbers.is_number?(token) ->
+        value = Numbers.parse!(token)
+        {[], buffer_add(context, value)}
 
-        true ->
-          throw({:unexpected_token, token})
-      end
+      Map.get(opts, :all) ->
+        {[], context}
 
-    {[], buffer_add(context, value)}
+      true ->
+        throw({:unexpected_token, token, context})
+    end
   end
 
   defp handle_result(element, context) do

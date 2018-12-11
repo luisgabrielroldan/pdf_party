@@ -1,5 +1,5 @@
 defmodule PDFParty.Reader.TokenizerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias PDFParty.Reader.Tokenizer
 
@@ -33,7 +33,6 @@ defmodule PDFParty.Reader.TokenizerTest do
       assert tokenize!("(Hello (World))") == ["(", "Hello (World)", ")"]
       assert tokenize!("(Hello (\\))") == ["(", "Hello (\\)", ")"]
       assert tokenize!("(Hello (\\123(())))") == ["(", "Hello (\\123(()))", ")"]
-
 
       # Hex strings
       assert tokenize!("<FFFE0040>") == ["<", "FFFE0040", ">"]

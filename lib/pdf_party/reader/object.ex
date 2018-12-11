@@ -1,13 +1,15 @@
 defmodule PDFParty.Reader.Object do
-  defstruct id: nil, gen: nil, dict: [], stream: nil
+  defstruct id: nil, gen: nil, data: nil
+
+  @type ref :: {:ref, integer(), integer()}
 
   def new(id, gen) do
     %__MODULE__{id: id, gen: gen}
   end
 
-  def set_stream(object, stream),
-    do: %{object | stream: stream}
+  def set_data(object, data),
+    do: %{object | data: data}
 
-  def set_dict(object, dict) when is_map(dict),
-    do: %{object | dict: dict}
+  def get_data(%__MODULE__{data: data}),
+    do: {:ok, data}
 end

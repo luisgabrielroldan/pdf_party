@@ -14,8 +14,17 @@ defmodule PDFParty.Reader.Str do
   def assign(%__MODULE__{} = str, value),
     do: %{str | value: value}
 
-  def build(%__MODULE__{is_hex?: true, value: value}),
-    do: value
+  def build(%__MODULE__{is_hex?: true, value: value}) do
+    String.length(value)
+    |> rem(2)
+    |> case do
+      0 ->
+        Base.decode16!(value)
+
+      1 ->
+        Base.decode16!(value <> "0")
+    end
+  end
 
   def build(%__MODULE__{value: value}),
     do: value

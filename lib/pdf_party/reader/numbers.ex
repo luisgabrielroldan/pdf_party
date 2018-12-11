@@ -17,16 +17,16 @@ defmodule PDFParty.Reader.Numbers do
     do: is_real?(str) or is_int?(str)
 
   def parse(str) do
-      cond do
-        is_real?(str) ->
-          parse_real(str)
+    cond do
+      is_real?(str) ->
+        parse_real(str)
 
-        is_int?(str) ->
-          parse_int(str)
+      is_int?(str) ->
+        parse_int(str)
 
-        true ->
-          throw {:invalid_number, str}
-      end
+      true ->
+        {:error, :invalid_number, str}
+    end
   end
 
   def is_real?(str),
@@ -38,10 +38,10 @@ defmodule PDFParty.Reader.Numbers do
   def parse_int(str) when is_binary(str) do
     case Integer.parse(str) do
       {value, ""} ->
-        value
+        {:ok, value}
 
       _ ->
-        throw {:invalid_number, str}
+        {:error, :invalid_number, str}
     end
   end
 
@@ -56,10 +56,40 @@ defmodule PDFParty.Reader.Numbers do
   def parse_real(str) when is_binary(str) do
     case Float.parse(str) do
       {value, ""} ->
-        value
+        {:ok, value}
 
       _ ->
-        throw {:invalid_number, str}
+        {:error, :invalid_number, str}
+    end
+  end
+
+  def parse_real!(str) do
+    case parse_real(str) do
+      {:ok, value} ->
+        value
+
+      {:error, error, str} ->
+        throw({error, str})
+    end
+  end
+
+  def parse_int!(str) do
+    case parse_int(str) do
+      {:ok, value} ->
+        value
+
+      {:error, error, str} ->
+        throw({error, str})
+    end
+  end
+
+  def parse!(str) do
+    case parse(str) do
+      {:ok, value} ->
+        value
+
+      {:error, error, str} ->
+        throw({error, str})
     end
   end
 end
